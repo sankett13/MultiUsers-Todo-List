@@ -1,9 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Listtodo from "./listtodo";
 import Navbar from "./navbar";
 
 const Search = () => {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/todos", {
+          method: "GET",
+          credentials: "include",
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch tasks");
+        }
+        const data = await response.json();
+        setTasks(data);
+        setLoading(false);
+      } catch (error) {
+        setError(error.message);
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, []);
 
   const handleAddClick = async () => {
     try {
@@ -21,11 +46,27 @@ const Search = () => {
       }
 
       const data = await response.json();
-      console.log("Added:", data);
+      setTasks([...tasks, data]);
       setDescription("");
-      window.location.reload(); // Uncomment if you want to reload the page after adding a todo
     } catch (error) {
       console.error("Error adding todo:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:3000/todos/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setTasks((prevTasks) =>
+          prevTasks.filter((task) => task.todo_id !== id)
+        );
+      } else {
+        console.error("Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Error:", error);
     }
   };
 
@@ -49,7 +90,13 @@ const Search = () => {
             Add
           </button>
         </div>
-        <Listtodo />
+        {loading ? (
+          <p>Loading...</p>
+        ) : error ? (
+          <p>{error}</p>
+        ) : (
+          <Listtodo tasks={tasks} handleDelete={handleDelete} />
+        )}
       </div>
     </>
   );
